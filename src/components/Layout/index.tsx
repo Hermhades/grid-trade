@@ -11,7 +11,7 @@ const AppLayout: React.FC = () => {
         <Outlet />
       </Content>
       <Footer className="text-center text-gray-600 bg-transparent">
-        Grid Trade ©{new Date().getFullYear()} Created by Your Name
+        Grid Trade ©{new Date().getFullYear()} Created by H.XY
       </Footer>
     </Layout>
   );

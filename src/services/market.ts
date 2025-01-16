@@ -159,6 +159,7 @@ export interface FundHistory {
   totalWorth: number;
   dayGrowth: number;
   bonus?: string;
+  isRealTime?: boolean;
 }
 
 // 获取基金历史净值
@@ -170,8 +171,27 @@ export const getFundHistory = async (
   pageSize = 20
 ): Promise<{ items: FundHistory[]; total: number }> => {
   try {
+    // 检查是否是当天
+    const today = new Date().toISOString().split('T')[0];
+    if (startDate === today && endDate === today) {
+      // 如果是当天，使用实时估值接口
+      const realTimeData = await getFundDetail(code);
+      return {
+        items: [{
+          date: realTimeData.lastUpdate,
+          netWorth: realTimeData.totalWorth,
+          totalWorth: 0,
+          dayGrowth: realTimeData.dayGrowth,
+          bonus: '-',
+          isRealTime: true
+        }],
+        total: 1
+      };
+    }
+
+    // 如果不是当天，使用历史净值接口
     const response = await axios.get(
-      'https://api.fund.eastmoney.com/f10/lsjz',
+      '/api/history/f10/lsjz',
       {
         params: {
           fundCode: code,
@@ -191,7 +211,8 @@ export const getFundHistory = async (
         netWorth: parseFloat(item.DWJZ) || 0,
         totalWorth: parseFloat(item.LJJZ) || 0,
         dayGrowth: parseFloat(item.JZZZL) || 0,
-        bonus: item.FHSP || '-'
+        bonus: item.FHSP || '-',
+        isRealTime: false
       })),
       total: TotalCount
     };

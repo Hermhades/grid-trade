@@ -15,8 +15,8 @@ export interface TradeRecord {
   status: 'holding' | 'sold';
   sellDate?: string;
   sellNetWorth?: number;
+  sellAccNetWorth?: number;
   sellAmount?: number;
-  sellShares?: number;
   profit?: number;
   profitRate?: number;
 }
@@ -98,17 +98,22 @@ const tradeRecordSlice = createSlice({
       recordId: string;
       sellDate: string;
       sellNetWorth: number;
-      sellAmount: number;
+      sellAccNetWorth: number;
     }>) => {
       const record = state.records.find(r => r.id === action.payload.recordId);
       if (record && record.status === 'holding') {
         record.status = 'sold';
         record.sellDate = action.payload.sellDate;
         record.sellNetWorth = action.payload.sellNetWorth;
-        record.sellAmount = action.payload.sellAmount;
-        record.sellShares = record.buyShares; // 默认全部卖出
-        record.profit = action.payload.sellAmount - record.buyAmount;
-        record.profitRate = (record.profit / record.buyAmount) * 100;
+        record.sellAccNetWorth = action.payload.sellAccNetWorth;
+        
+        // 使用累计净值计算盈亏
+        const sellAmount = record.buyShares * action.payload.sellAccNetWorth;
+        const buyAmount = record.buyShares * record.accNetWorth;
+        
+        record.sellAmount = sellAmount;
+        record.profit = sellAmount - buyAmount;
+        record.profitRate = (record.profit / buyAmount) * 100;
       }
     },
 

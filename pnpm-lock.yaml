@@ -14,6 +14,9 @@ importers:
       '@reduxjs/toolkit':
         specifier: ^2.5.0
         version: 2.5.0(react-redux@9.2.0(@types/react@18.3.18)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
+      '@types/classnames':
+        specifier: ^2.3.4
+        version: 2.3.4
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -26,6 +29,9 @@ importers:
       axios:
         specifier: ^1.7.9
         version: 1.7.9
+      classnames:
+        specifier: ^2.5.1
+        version: 2.5.1
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
@@ -663,6 +669,10 @@ packages:
 
   '@types/babel__traverse@7.20.6':
     resolution: {integrity: sha1-jcnwrg8gLAjY1Nq2SJEsjWA44/c=, tarball: http://r.npm.sankuai.com/@types/babel__traverse/download/@types/babel__traverse-7.20.6.tgz}
+
+  '@types/classnames@2.3.4':
+    resolution: {integrity: sha1-Gh/fUCPvIWIZ8T5wJUP5zps5RWA=, tarball: http://r.npm.sankuai.com/@types/classnames/download/@types/classnames-2.3.4.tgz}
+    deprecated: This is a stub types definition. classnames provides its own type definitions, so you do not need this installed.
 
   '@types/cookie@0.6.0':
     resolution: {integrity: sha1-6sOX8ovx1q4K4IE2PsovQlvt8NU=, tarball: http://r.npm.sankuai.com/@types/cookie/download/@types/cookie-0.6.0.tgz}
@@ -2702,6 +2712,10 @@ snapshots:
   '@types/babel__traverse@7.20.6':
     dependencies:
       '@babel/types': 7.26.5
+
+  '@types/classnames@2.3.4':
+    dependencies:
+      classnames: 2.5.1
 
   '@types/cookie@0.6.0': {}
 

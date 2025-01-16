@@ -2,19 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Spin, Button, Statistic, Row, Col, Divider, message } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { getFundDetail, FundDetail } from '../../services/market';
+import { getFundDetail, FundDetail, getFundHistory } from '../../services/market';
 import GridStrategyForm from '../../components/GridStrategyForm';
 import TradeRecordForm from '../../components/TradeRecordForm';
 import TradeRecordTable from '../../components/TradeRecordTable';
-import { useDispatch } from 'react-redux';
-import { sellRecord } from '../../store/slices/tradeRecordSlice';
+import SellModal from '../../components/SellModal';
+import type { TradeRecord } from '../../store/slices/tradeRecordSlice';
+import FundChart from '../../components/FundChart';
+import dayjs from 'dayjs';
 
 const FundPage: React.FC = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [fundDetail, setFundDetail] = useState<FundDetail | null>(null);
+  const [sellModalVisible, setSellModalVisible] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<TradeRecord | null>(null);
+  const [historyData, setHistoryData] = useState<{
+    date: string;
+    netWorth: number;
+    accNetWorth: number;
+  }[]>([]);
 
   useEffect(() => {
     const fetchFundDetail = async () => {
@@ -32,19 +40,31 @@ const FundPage: React.FC = () => {
     fetchFundDetail();
   }, [code]);
 
-  const handleSell = (record: any) => {
-    // TODO: 获取当前净值数据
-    const currentNetWorth = fundDetail?.netWorth || 0;
-    const sellAmount = record.buyShares * currentNetWorth;
+  useEffect(() => {
+    const fetchHistoryData = async () => {
+      if (!code) return;
+      
+      const endDate = dayjs().format('YYYY-MM-DD');
+      const startDate = dayjs().subtract(90, 'day').format('YYYY-MM-DD');
+      
+      try {
+        const data = await getFundHistory(code, startDate, endDate);
+        setHistoryData(data.items.map(item => ({
+          date: item.date,
+          netWorth: item.netWorth,
+          accNetWorth: item.totalWorth
+        })));
+      } catch (error) {
+        message.error('获取历史数据失败');
+      }
+    };
 
-    dispatch(sellRecord({
-      recordId: record.id,
-      sellDate: new Date().toISOString().split('T')[0],
-      sellNetWorth: currentNetWorth,
-      sellAmount,
-    }));
+    fetchHistoryData();
+  }, [code]);
 
-    message.success('卖出成功');
+  const handleSell = (record: TradeRecord) => {
+    setSelectedRecord(record);
+    setSellModalVisible(true);
   };
 
   if (!code) {
@@ -66,9 +86,9 @@ const FundPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-8">
+      <main className="max-w-7xl mx-auto px-8 py-12">
         {loading ? (
-          <div className="flex justify-center items-center h-64">
+          <div className="text-center py-12">
             <Spin size="large" />
           </div>
         ) : fundDetail ? (
@@ -144,6 +164,21 @@ const FundPage: React.FC = () => {
                 onSell={handleSell}
               />
             </div>
+
+            {/* 卖出弹窗 */}
+            {selectedRecord && (
+              <SellModal
+                record={selectedRecord}
+                visible={sellModalVisible}
+                onClose={() => {
+                  setSellModalVisible(false);
+                  setSelectedRecord(null);
+                }}
+              />
+            )}
+
+            {/* 添加图表组件 */}
+            {code && <FundChart fundCode={code} historyData={historyData} />}
           </div>
         ) : (
           <div className="text-center text-gray-500">未找到基金信息</div>

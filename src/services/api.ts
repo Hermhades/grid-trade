@@ -54,7 +54,7 @@ export const api = {
 
   // 获取基金详情
   getFundDetail: async (code: string): Promise<FundDetail | null> => {
-    const response = await instance.get(`/api/fundgz/js/${code}.js`);
+    const response = await instance.get(`/api/detail/${code}.js`);
     const data = jsonpToJson(response.data);
     if (!data) return null;
     

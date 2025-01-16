@@ -36,6 +36,15 @@ export default defineConfig({
           'Accept': '*/*',
           'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)'
         }
+      },
+      '/api/history': {
+        target: 'https://api.fund.eastmoney.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/history/, ''),
+        headers: {
+          'Referer': 'https://fund.eastmoney.com',
+          'Origin': 'https://fund.eastmoney.com'
+        }
       }
     }
   }

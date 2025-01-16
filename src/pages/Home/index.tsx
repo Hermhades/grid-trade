@@ -1,91 +1,36 @@
 import React from 'react';
-import { Card, Row, Col, Progress } from 'antd';
+import { Row, Col } from 'antd';
 import { useMarketData } from '../../hooks/useMarketData';
 import { MARKET_INDICES } from '../../services/market';
 import FundSearch from '../../components/FundSearch';
+import FundPortfolioOverview from '../../components/FundPortfolioOverview';
+import MarketCard from '../../components/MarketCard';
+
+const MARKET_NAMES = {
+  SH: '上证指数',
+  HS300: '沪深300',
+  CYB: '创业板指',
+  KC50: '科创50',
+  BANK: '中证银行',
+  SEC: '证券公司',
+} as const;
 
 const Home: React.FC = () => {
   const { indices, loading, error, lastUpdated } = useMarketData();
 
   const renderMarketCard = (code: keyof typeof MARKET_INDICES) => {
     const index = indices[code];
-    if (!index) {
-      return <Card loading={true} bordered={false} />;
-    }
-
-    let changeColor = 'text-gray-500';
-    let barColor = '#9ca3af';
-    let bgGradient = 'from-gray-50/30 via-white/20 to-white/10';
-    let changeSign = '';
     
-    if (index.change > 0) {
-      changeColor = 'text-rose-500';
-      barColor = '#f43f5e';
-      bgGradient = 'from-rose-50/30 via-white/20 to-white/10';
-      changeSign = '+';
-    } else if (index.change < 0) {
-      changeColor = 'text-emerald-500';
-      barColor = '#10b981';
-      bgGradient = 'from-emerald-50/30 via-white/20 to-white/10';
-    }
-
-    const progressPercent = Math.min(Math.max(Math.abs(index.change) * 10, 0), 100);
-
     return (
       <Col xs={24} sm={12} md={8} lg={6} key={code}>
-        <div className={`backdrop-blur-lg bg-gradient-to-br ${bgGradient} rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] transition-all duration-500 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] hover:-translate-y-0.5`}>
-          <div className="p-6 space-y-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-xl font-medium text-gray-900 mb-1">
-                  {index.name}
-                </h3>
-                <div className="text-xs font-medium text-gray-400 tracking-wide">
-                  {code}
-                </div>
-              </div>
-              <span className={`${changeColor} text-lg font-medium`}>
-                {changeSign}{index.change.toFixed(2)}%
-              </span>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="text-3xl font-light tracking-tight text-gray-900">
-                {index.current.toFixed(2)}
-              </div>
-              
-              <Progress 
-                percent={progressPercent}
-                showInfo={false}
-                strokeColor={{
-                  '0%': barColor,
-                  '100%': barColor + '90'
-                }}
-                size={3}
-                trailColor="rgba(0,0,0,0.02)"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">
-                  成交量
-                </div>
-                <div className="text-sm font-medium text-gray-600">
-                  {(index.volume / 10000).toFixed(2)}万
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">
-                  成交额
-                </div>
-                <div className="text-sm font-medium text-gray-600">
-                  {(index.amount / 100000000).toFixed(2)}亿
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <MarketCard
+          title={MARKET_NAMES[code]}
+          value={index?.current ?? 0}
+          change={index?.change ?? 0}
+          volume={index?.volume}
+          amount={index?.amount}
+          loading={!index || loading}
+        />
       </Col>
     );
   };
@@ -111,28 +56,38 @@ const Home: React.FC = () => {
               网格交易助手
             </h1>
           </div>
-          {lastUpdated && (
-            <div className="backdrop-blur-xl bg-white/60 px-4 py-2 rounded-2xl text-sm font-medium text-gray-700 shadow-sm border border-gray-200/50">
-              更新时间：{new Date(lastUpdated).toLocaleTimeString()}
-            </div>
-          )}
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-medium text-gray-900 mb-6">
-            市场概览
-          </h2>
-          <div className="mb-8">
-            <FundSearch />
+      <main className="max-w-7xl mx-auto px-8 py-8 space-y-12">
+        <div>
+          <div className="flex flex-col space-y-1 mb-6">
+            <h2 className="text-3xl font-medium text-gray-900">
+              市场概览
+            </h2>
+            {lastUpdated && (
+              <span className="text-xs font-medium text-gray-400 tracking-wide">
+                最后更新：{new Date(lastUpdated).toLocaleTimeString()}
+              </span>
+            )}
           </div>
+          <Row gutter={[16, 16]}>
+            {Object.entries(MARKET_INDICES).map(([key, _]) => 
+              <Col xs={24} sm={12} md={8} lg={4} key={key}>
+                <MarketCard
+                  title={MARKET_NAMES[key as keyof typeof MARKET_NAMES]}
+                  value={indices[key]?.current ?? 0}
+                  change={indices[key]?.change ?? 0}
+                  volume={indices[key]?.volume}
+                  amount={indices[key]?.amount}
+                  loading={!indices[key] || loading}
+                />
+              </Col>
+            )}
+          </Row>
         </div>
-        <Row gutter={[24, 24]}>
-          {Object.keys(MARKET_INDICES).map((code) => 
-            renderMarketCard(code as keyof typeof MARKET_INDICES)
-          )}
-        </Row>
+
+        <FundPortfolioOverview />
       </main>
     </div>
   );

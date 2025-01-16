@@ -40,38 +40,46 @@ const FundSearch: React.FC<FundSearchProps> = ({ onSelect }) => {
     } else {
       navigate(`/fund/${fund.code}`);
     }
+    setSearchResults([]);
   };
 
   return (
-    <div className="w-full max-w-xl">
+    <div className="relative w-full">
       <Search
         placeholder="输入基金代码或名称搜索"
         allowClear
-        enterButton={<SearchOutlined />}
-        size="large"
+        enterButton={<SearchOutlined className="text-sm" />}
+        size="middle"
         onChange={(e) => handleSearch(e.target.value)}
-        className="mb-4"
+        className="mb-1"
+        style={{ padding: '4px 0' }}
       />
       
       {loading ? (
-        <div className="flex justify-center py-4">
-          <Spin />
+        <div className="absolute left-0 right-0 bg-white/80 backdrop-blur-md rounded-lg shadow-lg py-4 z-10">
+          <div className="flex justify-center">
+            <Spin size="small" />
+          </div>
         </div>
       ) : (
         searchResults.length > 0 && (
           <List
-            className="bg-white/80 backdrop-blur-md rounded-lg shadow-lg"
+            className="absolute left-0 right-0 bg-white/80 backdrop-blur-md rounded-lg shadow-lg max-h-[300px] overflow-y-auto z-10 py-2"
             itemLayout="horizontal"
             dataSource={searchResults}
             renderItem={(item) => (
               <List.Item
-                className="cursor-pointer hover:bg-gray-50 px-4"
+                key={item.code}
+                className="cursor-pointer hover:bg-gray-50"
                 onClick={() => handleSelect(item)}
               >
-                <div className="flex flex-col">
-                  <div className="text-lg font-medium">{item.name}</div>
-                  <div className="text-sm text-gray-500">
-                    {item.code} | {item.type}
+                <div className="flex flex-col py-3 px-6 w-full">
+                  <div className="flex justify-between items-center gap-4">
+                    <span className="font-medium text-gray-900">{item.name}</span>
+                    <span className="text-xs text-gray-500 shrink-0">{item.code}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {item.type}
                   </div>
                 </div>
               </List.Item>
