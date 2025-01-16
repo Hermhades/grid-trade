@@ -61,7 +61,7 @@ const Home: React.FC = () => {
                   '0%': barColor,
                   '100%': barColor + '90'
                 }}
-                strokeWidth={3}
+                size={3}
                 trailColor="rgba(0,0,0,0.02)"
               />
             </div>
@@ -121,9 +121,12 @@ const Home: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-medium text-gray-900">
+          <h2 className="text-3xl font-medium text-gray-900 mb-6">
             市场概览
           </h2>
+          <div className="mb-8">
+            <FundSearch />
+          </div>
         </div>
         <Row gutter={[24, 24]}>
           {Object.keys(MARKET_INDICES).map((code) => 

@@ -2,6 +2,8 @@ import axios from 'axios';
 import { MarketIndex } from '../types/market';
 
 const SINA_API_BASE = '/api/sina/list=';
+const FUND_API_BASE = '/api/fund';
+const FUNDGZ_API_BASE = '/api/detail';
 
 // 指数代码映射
 export const MARKET_INDICES = {
@@ -74,9 +76,7 @@ export interface FundSearchResult {
 export const searchFunds = async (keyword: string): Promise<FundSearchResult[]> => {
   try {
     const response = await axios.get(
-      `https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?callback=&m=1&key=${encodeURIComponent(
-        keyword
-      )}`
+      `${FUND_API_BASE}/FundSearch/api/FundSearchAPI.ashx?m=1&key=${encodeURIComponent(keyword)}`
     );
     
     if (Array.isArray(response.data.Datas)) {
@@ -112,13 +112,29 @@ export interface FundDetail {
 export const getFundDetail = async (code: string): Promise<FundDetail> => {
   try {
     const response = await axios.get(
-      `https://fundgz.1234567.com.cn/js/${code}.js?rt=${new Date().getTime()}`
+      `${FUNDGZ_API_BASE}/${code}.js?rt=${new Date().getTime()}`,
+      {
+        transformResponse: [(data) => {
+          // 移除 jsonpgz() 包装
+          const jsonStr = data.replace(/^jsonpgz\((.*)\);?$/, '$1');
+          try {
+            return JSON.parse(jsonStr);
+          } catch (e) {
+            console.error('解析基金详情数据失败:', e);
+            return null;
+          }
+        }],
+        headers: {
+          'Accept': '*/*'
+        }
+      }
     );
     
-    // 移除 jsonpgz() 包装
-    const jsonStr = response.data.replace('jsonpgz(', '').replace(');', '');
-    const data = JSON.parse(jsonStr);
-    
+    const data = response.data;
+    if (!data) {
+      throw new Error('获取基金详情失败');
+    }
+
     return {
       code: data.fundcode,
       name: data.name,

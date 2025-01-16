@@ -3,10 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Spin, Button, Statistic, Row, Col, Divider, message } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { getFundDetail, FundDetail } from '../../services/market';
+import GridStrategyForm from '../../components/GridStrategyForm';
+import TradeRecordForm from '../../components/TradeRecordForm';
+import TradeRecordTable from '../../components/TradeRecordTable';
+import { useDispatch } from 'react-redux';
+import { sellRecord } from '../../store/slices/tradeRecordSlice';
 
 const FundPage: React.FC = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [fundDetail, setFundDetail] = useState<FundDetail | null>(null);
 
@@ -25,6 +31,21 @@ const FundPage: React.FC = () => {
 
     fetchFundDetail();
   }, [code]);
+
+  const handleSell = (record: any) => {
+    // TODO: 获取当前净值数据
+    const currentNetWorth = fundDetail?.netWorth || 0;
+    const sellAmount = record.buyShares * currentNetWorth;
+
+    dispatch(sellRecord({
+      recordId: record.id,
+      sellDate: new Date().toISOString().split('T')[0],
+      sellNetWorth: currentNetWorth,
+      sellAmount,
+    }));
+
+    message.success('卖出成功');
+  };
 
   if (!code) {
     return <div>基金代码不存在</div>;
@@ -113,22 +134,16 @@ const FundPage: React.FC = () => {
             </Card>
 
             {/* 网格交易策略表单 */}
-            <Card 
-              title="网格交易策略" 
-              className="backdrop-blur-lg bg-white/80 shadow-lg rounded-2xl border-0"
-            >
-              {/* TODO: 添加网格交易策略表单 */}
-              <div className="text-gray-500">网格交易策略表单开发中...</div>
-            </Card>
+            <GridStrategyForm fundCode={code} />
 
-            {/* 交易记录表格 */}
-            <Card 
-              title="交易记录" 
-              className="backdrop-blur-lg bg-white/80 shadow-lg rounded-2xl border-0"
-            >
-              {/* TODO: 添加交易记录表格 */}
-              <div className="text-gray-500">交易记录表格开发中...</div>
-            </Card>
+            {/* 交易记录表单和表格 */}
+            <div className="space-y-8">
+              <TradeRecordForm fundCode={code} />
+              <TradeRecordTable 
+                fundCode={code}
+                onSell={handleSell}
+              />
+            </div>
           </div>
         ) : (
           <div className="text-center text-gray-500">未找到基金信息</div>
