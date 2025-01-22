@@ -106,6 +106,13 @@ export interface FundDetail {
   lastUpdate: string;
   fundScale: string;
   manager: string;
+  dividend: string;      // 成立来分红
+  managementFee: string; // 管理费率
+  custodianFee: string; // 托管费率
+  serviceFee: string;   // 销售服务费率
+  subscriptionFee: string; // 最高认购费率
+  purchaseFee: string;  // 最高申购费率
+  redemptionFee: string; // 最高赎回费率
 }
 
 // 获取基金详情
@@ -144,11 +151,80 @@ export const getFundDetail = async (code: string): Promise<FundDetail> => {
       dayGrowth: parseFloat(data.gszzl) || 0,
       lastUpdate: data.gztime || '-',
       fundScale: data.fundScale || '-',
-      manager: data.manager || '-'
+      manager: data.manager || '-',
+      dividend: '-',
+      managementFee: '-',
+      custodianFee: '-',
+      serviceFee: '-',
+      subscriptionFee: '-',
+      purchaseFee: '-',
+      redemptionFee: '-'
     };
   } catch (error) {
     console.error('获取基金详情失败:', error);
     throw error;
+  }
+};
+
+// 获取基金完整详情
+export const getFundFullDetail = async (code: string): Promise<FundDetail> => {
+  try {
+    // 1. 获取实时数据
+    const realtimeData = await getFundDetail(code);
+    
+    // 2. 获取基金详细信息
+    const response = await axios.get(
+      `/api/fund/f10/jbgk_${code}.html`,
+      {
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+      }
+    );
+    
+    // 解析HTML获取详细信息
+    const html = response.data;
+    const managerMatch = html.match(/基金经理人<\/th><td[^>]*><a[^>]*>([^<]+)<\/a>/);
+    const dividendMatch = html.match(/成立来分红<\/th><td[^>]*><a[^>]*>([^<]+)<\/a>/);
+    
+    // 通用的费率提取函数
+    const extractFeeRate = (label: string) => {
+      // 先尝试匹配包含优惠费率的情况
+      const fullPattern = new RegExp(`${label}<\/th><td[^>]*>(?:.*?<span[^>]*>([^<]+)<\/span>)?(?:.*?天天基金优惠费率：<span[^>]*>([^<]+)<\/span>)?(?:.*?)<\/td>`);
+      const fullMatch = html.match(fullPattern);
+      
+      if (fullMatch && (fullMatch[1] || fullMatch[2])) {
+        const [_, originalRate, discountRate] = fullMatch;
+        if (discountRate) {
+          return `${discountRate}`;
+        }
+        return originalRate;
+      }
+      
+      // 如果没有匹配到优惠费率格式，尝试匹配普通格式
+      const simplePattern = new RegExp(`${label}<\/th><td[^>]*>([^<]+)<\/td>`);
+      const simpleMatch = html.match(simplePattern);
+      return simpleMatch ? simpleMatch[1].trim() : '-';
+    };
+
+    const scaleMatch = html.match(/资产规模<\/th><td[^>]*>([^<]+)<th>/);
+    
+    return {
+      ...realtimeData,
+      manager: managerMatch ? managerMatch[1].trim() : realtimeData.manager,
+      fundScale: scaleMatch ? scaleMatch[1].trim() : realtimeData.fundScale,
+      dividend: dividendMatch ? dividendMatch[1].trim() : '-',
+      managementFee: extractFeeRate('管理费率'),
+      custodianFee: extractFeeRate('托管费率'),
+      serviceFee: extractFeeRate('销售服务费率'),
+      subscriptionFee: extractFeeRate('最高认购费率'),
+      purchaseFee: extractFeeRate('最高申购费率'),
+      redemptionFee: extractFeeRate('最高赎回费率')
+    };
+  } catch (error) {
+    console.error('获取基金完整详情失败:', error);
+    // 如果获取详细信息失败，返回实时数据
+    return getFundDetail(code);
   }
 };
 

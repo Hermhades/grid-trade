@@ -36,8 +36,8 @@ const MarketCard: React.FC<MarketCardProps> = ({
   const isPositive = change >= 0;
   const absChange = Math.abs(change);
   
-  // 计算进度条的百分比，±10%为满格
-  const progressPercent = Math.min(Math.abs(change) * 10, 100);
+  // 计算进度条的百分比，±3%为满格
+  const progressPercent = Math.min(Math.abs(change) * (100 / 3), 100);
 
   return (
     <Card

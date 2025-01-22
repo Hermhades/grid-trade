@@ -34,7 +34,7 @@ const tradeRecordSlice = createSlice({
   initialState,
   reducers: {
     // 添加新交易记录
-    addRecord: (state, action: PayloadAction<Omit<TradeRecord, 'id' | 'status' | 'buyShares' | 'actualGridWidth'>>) => {
+    addRecord: (state, action: PayloadAction<Omit<TradeRecord, 'id' | 'status' | 'buyShares' | 'sellDate' | 'sellNetWorth' | 'sellAccNetWorth' | 'sellAmount' | 'profit' | 'profitRate'>>) => {
       const { 
         fundCode, 
         strategyId, 
@@ -121,6 +121,10 @@ const tradeRecordSlice = createSlice({
     deleteRecord: (state, action: PayloadAction<string>) => {
       state.records = state.records.filter(record => record.id !== action.payload);
     },
+
+    setRecords: (state, action: PayloadAction<TradeRecord[]>) => {
+      state.records = action.payload;
+    },
   },
 });
 
@@ -128,7 +132,8 @@ export const {
   addRecord, 
   updateExpectedSell, 
   sellRecord, 
-  deleteRecord 
+  deleteRecord,
+  setRecords
 } = tradeRecordSlice.actions;
 
 export default tradeRecordSlice.reducer; 

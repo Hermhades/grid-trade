@@ -66,9 +66,12 @@ const gridStrategySlice = createSlice({
     deleteStrategy: (state, action: PayloadAction<string>) => {
       state.strategies = state.strategies.filter(strategy => strategy.id !== action.payload);
     },
+    setStrategies: (state, action: PayloadAction<GridStrategy[]>) => {
+      state.strategies = action.payload;
+    },
   },
 });
 
-export const { addStrategy, updateStrategy, toggleStrategyStatus, deleteStrategy } = gridStrategySlice.actions;
+export const { addStrategy, updateStrategy, toggleStrategyStatus, deleteStrategy, setStrategies } = gridStrategySlice.actions;
 
 export default gridStrategySlice.reducer; 

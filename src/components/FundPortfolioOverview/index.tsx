@@ -21,7 +21,10 @@ interface FundCard {
     date: string;
     price: number;
   };
-  nextGridWidth: number;
+  nextGridWidth: {
+    buy: number;
+    sell: number;
+  };
   isStarred: boolean;
   strategy: {
     buyWidth: number;
@@ -87,25 +90,21 @@ const FundPortfolioOverview: React.FC = () => {
       const lastOperation = fundRecords[0];
       
       // 计算距离下次操作的网格宽度
-      let nextGridWidth = 0;
+      let nextGridWidth = {
+        buy: 0,
+        sell: 0
+      };
       if (lastOperation && activeStrategy) {
         const currentNetWorth = fund.estimatedNetWorth || fund.netWorth;
-        const gridWidth = lastOperation.status === 'holding'
-          ? ((currentNetWorth - lastOperation.netWorth) / lastOperation.netWorth) * 100
-          : ((currentNetWorth - lastOperation.sellNetWorth!) / lastOperation.sellNetWorth!) * 100;
+        const baseNetWorth = lastOperation.status === 'holding'
+          ? lastOperation.netWorth
+          : lastOperation.sellNetWorth!;
+        const gridWidth = ((currentNetWorth - baseNetWorth) / baseNetWorth) * 100;
 
-        if (gridWidth >= 0) {
-          // 如果当前净值高于买入点，计算距离卖出点的剩余比例
-          nextGridWidth = gridWidth > activeStrategy.sellWidth 
-            ? activeStrategy.sellWidth - gridWidth  // 已超出卖出阈值，显示负数
-            : activeStrategy.sellWidth - gridWidth; // 未达到卖出阈值，显示正数
-        } else {
-          // 如果当前净值低于买入点，计算距离下一个买入点的剩余比例
-          const absGridWidth = Math.abs(gridWidth);
-          nextGridWidth = absGridWidth > activeStrategy.buyWidth
-            ? activeStrategy.buyWidth - absGridWidth  // 已超出买入阈值，显示负数
-            : activeStrategy.buyWidth - absGridWidth; // 未达到买入阈值，显示正数
-        }
+        // 计算距离买入点的距离（负数表示已超过买入点）
+        nextGridWidth.buy = -gridWidth - activeStrategy.buyWidth;
+        // 计算距离卖出点的距离（负数表示已超过卖出点）
+        nextGridWidth.sell = activeStrategy.sellWidth - gridWidth;
       }
 
       cards.push({
@@ -172,7 +171,7 @@ const FundPortfolioOverview: React.FC = () => {
 
   const renderFundCard = (fund: FundCard) => {
     const profitColor = fund.totalProfit >= 0 ? 'text-rose-500' : 'text-emerald-500';
-    const nextGridColor = fund.nextGridWidth >= 0 ? 'text-rose-500' : 'text-emerald-500';
+    const nextGridColor = fund.nextGridWidth.buy >= 0 ? 'text-rose-500' : 'text-emerald-500';
 
     return (
       <Col xs={24} sm={12} lg={8} xl={6} key={fund.code}>
@@ -237,9 +236,20 @@ const FundPortfolioOverview: React.FC = () => {
             </div>
 
             <div>
-              <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">距离下次操作</div>
-              <div className={`text-lg font-medium ${nextGridColor}`}>
-                {fund.nextGridWidth >= 0 ? '+' : ''}{fund.nextGridWidth.toFixed(2)}%
+              <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">距离操作</div>
+              <div className="text-lg font-medium">
+                {fund.lastOperation.date !== '-' ? (
+                  <div className="space-y-1">
+                    <div className={fund.nextGridWidth.buy >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                      距买入: {fund.nextGridWidth.buy >= 0 ? '+' : ''}{fund.nextGridWidth.buy.toFixed(2)}%
+                    </div>
+                    <div className={fund.nextGridWidth.sell >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                      距卖出: {fund.nextGridWidth.sell >= 0 ? '+' : ''}{fund.nextGridWidth.sell.toFixed(2)}%
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-400">暂无操作记录</span>
+                )}
               </div>
             </div>
           </div>

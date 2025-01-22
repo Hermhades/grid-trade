@@ -121,7 +121,7 @@ const FundChart: React.FC<FundChartProps> = ({ fundCode, historyData }) => {
               const record = tradeRecords.find(r => r.date === dates[point.coord[0]]);
               return {
                 ...point,
-                itemStyle: { color: '#10b981' },
+                itemStyle: { color: '#f43f5e' },
                 label: {
                   formatter: record?.status === 'sold' 
                     ? `买入`  // 如果已卖出，只显示"买入"文字
@@ -140,7 +140,7 @@ const FundChart: React.FC<FundChartProps> = ({ fundCode, historyData }) => {
                   coord: [buyIndex, values[buyIndex]],
                   lineStyle: {
                     type: 'dashed',
-                    color: record.profit! >= 0 ? '#10b981' : '#f43f5e'
+                    color: record.profit! >= 0 ? '#f43f5e' : '#10b981'
                   }
                 }, {
                   coord: [sellIndex, record.sellAccNetWorth],
@@ -150,7 +150,7 @@ const FundChart: React.FC<FundChartProps> = ({ fundCode, historyData }) => {
                     position: 'end',
                     distance: 10,
                     fontSize: 12,
-                    color: record.profit! >= 0 ? '#10b981' : '#f43f5e'
+                    color: record.profit! >= 0 ? '#f43f5e' : '#10b981'
                   }
                 }];
               }),

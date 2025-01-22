@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Spin, Button, Statistic, Row, Col, Divider, message } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { getFundDetail, FundDetail, getFundHistory } from '../../services/market';
+import { getFundFullDetail, FundDetail, getFundHistory } from '../../services/market';
 import GridStrategyForm from '../../components/GridStrategyForm';
 import TradeRecordForm from '../../components/TradeRecordForm';
 import TradeRecordTable from '../../components/TradeRecordTable';
@@ -28,7 +28,7 @@ const FundPage: React.FC = () => {
     const fetchFundDetail = async () => {
       if (!code) return;
       try {
-        const detail = await getFundDetail(code);
+        const detail = await getFundFullDetail(code);
         setFundDetail(detail);
       } catch (error) {
         message.error('获取基金详情失败');
@@ -104,21 +104,21 @@ const FundPage: React.FC = () => {
                 </div>
 
                 <Row gutter={48}>
-                  <Col span={6}>
+                  <Col span={8}>
                     <Statistic
                       title="单位净值"
                       value={fundDetail.netWorth}
                       precision={4}
                     />
                   </Col>
-                  <Col span={6}>
+                  <Col span={8}>
                     <Statistic
                       title="累计净值"
                       value={fundDetail.totalWorth}
                       precision={4}
                     />
                   </Col>
-                  <Col span={6}>
+                  <Col span={8}>
                     <Statistic
                       title="日涨幅"
                       value={fundDetail.dayGrowth}
@@ -130,20 +130,46 @@ const FundPage: React.FC = () => {
                       }}
                     />
                   </Col>
-                  <Col span={6}>
-                    <Statistic
-                      title="基金规模"
-                      value={fundDetail.fundScale}
-                    />
-                  </Col>
                 </Row>
 
                 <Divider />
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">基金经理：</span>
                     <span className="text-gray-900">{fundDetail.manager}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">资产规模：</span>
+                    <span className="text-gray-900">{fundDetail.fundScale}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">成立来分红：</span>
+                    <span className="text-gray-900">{fundDetail.dividend}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">管理费率：</span>
+                    <span className="text-gray-900">{fundDetail.managementFee}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">托管费率：</span>
+                    <span className="text-gray-900">{fundDetail.custodianFee}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">销售服务费率：</span>
+                    <span className="text-gray-900">{fundDetail.serviceFee}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">最高认购费率：</span>
+                    <span className="text-gray-900">{fundDetail.subscriptionFee}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">最高申购费率：</span>
+                    <span className="text-gray-900">{fundDetail.purchaseFee}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">最高赎回费率：</span>
+                    <span className="text-gray-900">{fundDetail.redemptionFee}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">最后更新：</span>

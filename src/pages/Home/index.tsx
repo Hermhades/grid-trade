@@ -1,10 +1,15 @@
-import React from 'react';
-import { Row, Col } from 'antd';
+import React, { useState } from 'react';
+import { Row, Col, Space, Button } from 'antd';
 import { useMarketData } from '../../hooks/useMarketData';
 import { MARKET_INDICES } from '../../services/market';
 import FundSearch from '../../components/FundSearch';
 import FundPortfolioOverview from '../../components/FundPortfolioOverview';
 import MarketCard from '../../components/MarketCard';
+import { CloudUploadOutlined, CloudDownloadOutlined } from '@ant-design/icons';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../store';
+import { exportData, downloadJson } from '../../utils/backup';
+import BackupModal from '../../components/BackupModal';
 
 const MARKET_NAMES = {
   SH: '上证指数',
@@ -17,6 +22,8 @@ const MARKET_NAMES = {
 
 const Home: React.FC = () => {
   const { indices, loading, error, lastUpdated } = useMarketData();
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const state = useSelector((state: RootState) => state);
 
   const renderMarketCard = (code: keyof typeof MARKET_INDICES) => {
     const index = indices[code];
@@ -33,6 +40,12 @@ const Home: React.FC = () => {
         />
       </Col>
     );
+  };
+
+  // 处理导出
+  const handleExport = () => {
+    const data = exportData(state);
+    downloadJson(data);
   };
 
   if (error) {
@@ -56,6 +69,21 @@ const Home: React.FC = () => {
               网格交易助手
             </h1>
           </div>
+          <Space>
+            <Button 
+              icon={<CloudUploadOutlined />} 
+              onClick={() => setImportModalVisible(true)}
+            >
+              导入数据
+            </Button>
+            <Button 
+              icon={<CloudDownloadOutlined />} 
+              onClick={handleExport}
+              type="primary"
+            >
+              导出数据
+            </Button>
+          </Space>
         </div>
       </header>
 
@@ -89,6 +117,11 @@ const Home: React.FC = () => {
 
         <FundPortfolioOverview />
       </main>
+
+      <BackupModal
+        visible={importModalVisible}
+        onClose={() => setImportModalVisible(false)}
+      />
     </div>
   );
 };

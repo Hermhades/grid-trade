@@ -20,7 +20,7 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
     netWorth: number;
     lastUpdate: string;
     gridWidth?: number;
-    estimatedGridSize?: number;
+    estimatedGridSize?: { buy: number; sell: number };
   } | null>(null);
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(dayjs());
 
@@ -29,10 +29,10 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
     state.gridStrategy.strategies.find(s => s.fundCode === fundCode && s.isActive)
   );
 
-  // 获取最新的持仓记录
-  const latestHoldingRecord = useSelector((state: RootState) => {
+  // 获取最新的持仓记录或最新的卖出记录
+  const latestRecord = useSelector((state: RootState) => {
     const records = state.tradeRecord.records
-      .filter(record => record.fundCode === fundCode && record.status === 'holding')
+      .filter(record => record.fundCode === fundCode)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return records[0] || null;
   });
@@ -46,25 +46,23 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
         
         if (isRealTime) {
           // 如果是实时数据，计算网格宽度并更新状态
-          const gridWidth = latestHoldingRecord
-            ? ((netWorth - latestHoldingRecord.netWorth) / latestHoldingRecord.netWorth) * 100
-            : undefined;
+          let gridWidth: number | undefined;
+          if (latestRecord) {
+            const baseNetWorth = latestRecord.status === 'holding' 
+              ? latestRecord.netWorth 
+              : latestRecord.sellNetWorth!;
+            gridWidth = ((netWorth - baseNetWorth) / baseNetWorth) * 100;
+          }
           
           // 计算预估网格大小
-          let estimatedGridSize: number | undefined;
+          let estimatedGridSize: { buy: number; sell: number } | undefined;
           if (gridWidth !== undefined && activeStrategy) {
-            if (gridWidth >= 0) {
-              // 如果当前净值高于买入点，计算距离卖出点的剩余比例
-              estimatedGridSize = gridWidth > activeStrategy.sellWidth 
-                ? activeStrategy.sellWidth - gridWidth  // 已超出卖出阈值，显示负数
-                : activeStrategy.sellWidth - gridWidth; // 未达到卖出阈值，显示正数
-            } else {
-              // 如果当前净值低于买入点，计算距离下一个买入点的剩余比例
-              const absGridWidth = Math.abs(gridWidth);
-              estimatedGridSize = absGridWidth > activeStrategy.buyWidth
-                ? activeStrategy.buyWidth - absGridWidth  // 已超出买入阈值，显示负数
-                : activeStrategy.buyWidth - absGridWidth; // 未达到买入阈值，显示正数
-            }
+            estimatedGridSize = {
+              // 计算距离买入点的距离（负数表示已超过买入点）
+              buy: -gridWidth - activeStrategy.buyWidth,
+              // 计算距离卖出点的距离（负数表示已超过卖出点）
+              sell: activeStrategy.sellWidth - gridWidth
+            };
           }
           
           setRealTimeData({
@@ -96,6 +94,20 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
     }
   };
 
+  // 组件初始化时自动加载当日数据
+  useEffect(() => {
+    if (selectedDate?.isSame(dayjs(), 'day')) {
+      fetchNetWorthData(selectedDate.format('YYYY-MM-DD'));
+    }
+  }, []);
+
+  // 监听最新记录变化，重新计算网格距离
+  useEffect(() => {
+    if (selectedDate?.isSame(dayjs(), 'day')) {
+      fetchNetWorthData(selectedDate.format('YYYY-MM-DD'));
+    }
+  }, [latestRecord]);
+
   // 自动刷新实时数据
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -116,7 +128,7 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
         clearInterval(timer);
       }
     };
-  }, [selectedDate, fundCode, latestHoldingRecord]);
+  }, [selectedDate, fundCode, latestRecord]);
 
   const handleDateChange = async (date: dayjs.Dayjs | null) => {
     setSelectedDate(date);
@@ -183,7 +195,7 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
                 style={{ width: '100%' }}
                 disabledDate={(current) => {
                   const today = dayjs().endOf('day');
-                  const latestDate = latestHoldingRecord?.date ? dayjs(latestHoldingRecord.date) : null;
+                  const latestDate = latestRecord?.date ? dayjs(latestRecord.date) : null;
                   return current > today || (latestDate ? current < latestDate : false);
                 }}
                 onChange={handleDateChange}
@@ -241,8 +253,8 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
                   更新时间: {realTimeData.lastUpdate}
                   <br />
                   预估网格大小: {
-                    realTimeData.estimatedGridSize !== undefined
-                      ? `距${realTimeData.gridWidth && realTimeData.gridWidth >= 0 ? '下次卖出' : '下次买入'}的网格宽度为 ${realTimeData.estimatedGridSize >= 0 ? '+' : ''}${realTimeData.estimatedGridSize.toFixed(2)}%`
+                    realTimeData.estimatedGridSize
+                      ? `距买入 ${realTimeData.estimatedGridSize.buy >= 0 ? '+' : ''}${realTimeData.estimatedGridSize.buy.toFixed(2)}% | 距卖出 ${realTimeData.estimatedGridSize.sell >= 0 ? '+' : ''}${realTimeData.estimatedGridSize.sell.toFixed(2)}%`
                       : '-'
                   }
                 </Text>

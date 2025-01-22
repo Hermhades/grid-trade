@@ -13,6 +13,19 @@ export default defineConfig({
           'Referer': 'https://finance.sina.com.cn'
         }
       },
+      '/api/fund/f10': {
+        target: 'https://fundf10.eastmoney.com',
+        changeOrigin: true,
+        rewrite: (path) => {
+          return path.replace(/^\/api\/fund\/f10/, '');
+        },
+        headers: {
+          'Referer': 'https://fund.eastmoney.com',
+          'Origin': 'https://fund.eastmoney.com',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+      },
       '/api/fund': {
         target: 'https://fundsuggest.eastmoney.com',
         changeOrigin: true,
