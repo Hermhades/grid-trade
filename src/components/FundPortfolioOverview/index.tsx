@@ -240,10 +240,10 @@ const FundPortfolioOverview: React.FC = () => {
               <div className="text-lg font-medium">
                 {fund.lastOperation.date !== '-' ? (
                   <div className="space-y-1">
-                    <div className={fund.nextGridWidth.buy >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                    <div className={Math.abs(fund.nextGridWidth.buy) <= Math.abs(fund.nextGridWidth.sell) ? 'font-bold' : ''}>
                       距买入: {fund.nextGridWidth.buy >= 0 ? '+' : ''}{fund.nextGridWidth.buy.toFixed(2)}%
                     </div>
-                    <div className={fund.nextGridWidth.sell >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                    <div className={Math.abs(fund.nextGridWidth.buy) > Math.abs(fund.nextGridWidth.sell) ? 'font-bold' : ''}>
                       距卖出: {fund.nextGridWidth.sell >= 0 ? '+' : ''}{fund.nextGridWidth.sell.toFixed(2)}%
                     </div>
                   </div>
