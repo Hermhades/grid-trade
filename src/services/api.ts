@@ -24,7 +24,7 @@ const jsonpToJson = (jsonp: string) => {
 export const api = {
   // 获取市场指数
   getMarketIndexes: async (): Promise<MarketIndex[]> => {
-    const response = await instance.get('/api/sina/list=s_sh000001,s_sz399001,s_sz399006');
+    const response = await instance.get('/api/sina?list=s_sh000001,s_sz399001,s_sz399006');
     const data = response.data.split('\n').filter(Boolean);
     return data.map((item: string) => {
       const [name, current, change, changePercent] = item.split(',');
@@ -42,7 +42,7 @@ export const api = {
   // 搜索基金
   searchFunds: async (keyword: string): Promise<FundSearchItem[]> => {
     const response = await instance.get(
-      `/api/fund/FundSearch/api/FundSearchAPI.ashx?m=1&key=${keyword}`
+      `/api/fund?m=1&key=${encodeURIComponent(keyword)}`
     );
     const data = jsonpToJson(response.data);
     return data?.Datas?.map((item: any) => ({
@@ -54,18 +54,34 @@ export const api = {
 
   // 获取基金详情
   getFundDetail: async (code: string): Promise<FundDetail | null> => {
-    const response = await instance.get(`/api/detail/${code}.js`);
-    const data = jsonpToJson(response.data);
-    if (!data) return null;
-    
-    return {
-      code: data.fundcode,
-      name: data.name,
-      netWorth: Number(data.dwjz),
-      accumulatedNetWorth: Number(data.ljjz || 0),
-      estimatedNetWorth: Number(data.gsz),
-      estimatedTime: data.gztime,
-      updateTime: data.jzrq,
-    };
+    try {
+      const response = await instance.get(`/api/detail/${code}.js`);
+      
+      // 检查错误响应
+      if (response.data.error) {
+        console.error('获取基金详情失败:', response.data.error);
+        return null;
+      }
+
+      // 处理JSONP响应
+      const data = jsonpToJson(response.data);
+      if (!data) {
+        console.error('解析基金详情失败');
+        return null;
+      }
+      
+      return {
+        code: data.fundcode,
+        name: data.name,
+        netWorth: Number(data.dwjz),
+        accumulatedNetWorth: Number(data.ljjz || 0),
+        estimatedNetWorth: Number(data.gsz),
+        estimatedTime: data.gztime,
+        updateTime: data.jzrq,
+      };
+    } catch (error) {
+      console.error('获取基金详情失败:', error);
+      return null;
+    }
   },
 };

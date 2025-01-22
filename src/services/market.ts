@@ -1,9 +1,15 @@
 import axios from 'axios';
 import { MarketIndex } from '../types/market';
+import { apiConfig } from '../config/api.config';
 
-const SINA_API_BASE = '/api/sina/list=';
-const FUND_API_BASE = '/api/fund';
-const FUNDGZ_API_BASE = '/api/detail';
+// 创建axios实例
+const createAxiosInstance = (type: keyof typeof apiConfig) => {
+  return axios.create({
+    baseURL: apiConfig[type].baseUrl,
+    headers: apiConfig[type].headers,
+    timeout: 10000,
+  });
+};
 
 // 指数代码映射
 export const MARKET_INDICES = {
@@ -38,7 +44,8 @@ const parseSinaResponse = (code: string, data: string): MarketIndex => {
 // 获取单个指数数据
 export const fetchMarketIndex = async (code: string): Promise<MarketIndex> => {
   try {
-    const response = await axios.get(`${SINA_API_BASE}${code}`);
+    const sinaApi = createAxiosInstance('sina');
+    const response = await sinaApi.get(`?list=${code}`);
     return parseSinaResponse(code, response.data);
   } catch (error) {
     throw new Error(`Failed to fetch market index: ${error}`);
@@ -50,7 +57,8 @@ export const fetchAllMarketIndices = async (): Promise<Record<string, MarketInde
   const codes = Object.values(MARKET_INDICES).join(',');
   
   try {
-    const response = await axios.get(`${SINA_API_BASE}${codes}`);
+    const sinaApi = createAxiosInstance('sina');
+    const response = await sinaApi.get(`?list=${codes}`);
     const result: Record<string, MarketIndex> = {};
     const dataList = response.data.split(';').filter(Boolean);
     
@@ -75,8 +83,9 @@ export interface FundSearchResult {
 // 基金搜索函数
 export const searchFunds = async (keyword: string): Promise<FundSearchResult[]> => {
   try {
-    const response = await axios.get(
-      `${FUND_API_BASE}/FundSearch/api/FundSearchAPI.ashx?m=1&key=${encodeURIComponent(keyword)}`
+    const fundApi = createAxiosInstance('fund');
+    const response = await fundApi.get(
+      `/FundSearch/api/FundSearchAPI.ashx?m=1&key=${encodeURIComponent(keyword)}`
     );
     
     if (Array.isArray(response.data.Datas)) {
@@ -118,51 +127,41 @@ export interface FundDetail {
 // 获取基金详情
 export const getFundDetail = async (code: string): Promise<FundDetail> => {
   try {
-    const response = await axios.get(
-      `${FUNDGZ_API_BASE}/${code}.js?rt=${new Date().getTime()}`,
-      {
-        transformResponse: [(data) => {
-          // 移除 jsonpgz() 包装
-          const jsonStr = data.replace(/^jsonpgz\((.*)\);?$/, '$1');
-          try {
-            return JSON.parse(jsonStr);
-          } catch (e) {
-            console.error('解析基金详情数据失败:', e);
-            return null;
-          }
-        }],
-        headers: {
-          'Accept': '*/*'
-        }
-      }
-    );
-    
+    // 1. 获取实时数据
+    const response = await axios.get(`/api/detail/${code}.js`);
     const data = response.data;
-    if (!data) {
-      throw new Error('获取基金详情失败');
+    
+    // 检查响应格式
+    if (typeof data === 'string') {
+      // 尝试解析JSONP格式
+      const match = data.match(/\{.*\}/);
+      if (match) {
+        const jsonData = JSON.parse(match[0]);
+        return {
+          code: jsonData.fundcode || code,
+          name: jsonData.name || '-',
+          type: jsonData.fundtype || '-',
+          netWorth: parseFloat(jsonData.dwjz) || 0,
+          totalWorth: parseFloat(jsonData.gsz) || 0,
+          dayGrowth: parseFloat(jsonData.gszzl) || 0,
+          lastUpdate: jsonData.gztime || '-',
+          fundScale: '-',
+          manager: '-',
+          dividend: '-',
+          managementFee: '-',
+          custodianFee: '-',
+          serviceFee: '-',
+          subscriptionFee: '-',
+          purchaseFee: '-',
+          redemptionFee: '-'
+        };
+      }
     }
 
-    return {
-      code: data.fundcode,
-      name: data.name,
-      type: data.fundtype || '-',
-      netWorth: parseFloat(data.dwjz) || 0,
-      totalWorth: parseFloat(data.gsz) || 0,
-      dayGrowth: parseFloat(data.gszzl) || 0,
-      lastUpdate: data.gztime || '-',
-      fundScale: data.fundScale || '-',
-      manager: data.manager || '-',
-      dividend: '-',
-      managementFee: '-',
-      custodianFee: '-',
-      serviceFee: '-',
-      subscriptionFee: '-',
-      purchaseFee: '-',
-      redemptionFee: '-'
-    };
+    throw new Error('无效的数据格式');
   } catch (error) {
     console.error('获取基金详情失败:', error);
-    throw error;
+    throw new Error('获取基金详情失败');
   }
 };
 
@@ -170,7 +169,7 @@ export const getFundDetail = async (code: string): Promise<FundDetail> => {
 export const getFundFullDetail = async (code: string): Promise<FundDetail> => {
   try {
     // 1. 获取实时数据
-    const realtimeData = await getFundDetail(code);
+    const basicDetail = await getFundDetail(code);
     
     // 2. 获取基金详细信息
     const response = await axios.get(
@@ -182,6 +181,11 @@ export const getFundFullDetail = async (code: string): Promise<FundDetail> => {
       }
     );
     
+    // 如果获取额外信息失败，至少返回基础信息
+    if (!response.data) {
+      return basicDetail;
+    }
+
     // 解析HTML获取详细信息
     const html = response.data;
     const managerMatch = html.match(/基金经理人<\/th><td[^>]*><a[^>]*>([^<]+)<\/a>/);
@@ -189,7 +193,6 @@ export const getFundFullDetail = async (code: string): Promise<FundDetail> => {
     
     // 通用的费率提取函数
     const extractFeeRate = (label: string) => {
-      // 先尝试匹配包含优惠费率的情况
       const fullPattern = new RegExp(`${label}<\/th><td[^>]*>(?:.*?<span[^>]*>([^<]+)<\/span>)?(?:.*?天天基金优惠费率：<span[^>]*>([^<]+)<\/span>)?(?:.*?)<\/td>`);
       const fullMatch = html.match(fullPattern);
       
@@ -201,7 +204,6 @@ export const getFundFullDetail = async (code: string): Promise<FundDetail> => {
         return originalRate;
       }
       
-      // 如果没有匹配到优惠费率格式，尝试匹配普通格式
       const simplePattern = new RegExp(`${label}<\/th><td[^>]*>([^<]+)<\/td>`);
       const simpleMatch = html.match(simplePattern);
       return simpleMatch ? simpleMatch[1].trim() : '-';
@@ -210,9 +212,9 @@ export const getFundFullDetail = async (code: string): Promise<FundDetail> => {
     const scaleMatch = html.match(/资产规模<\/th><td[^>]*>([^<]+)<th>/);
     
     return {
-      ...realtimeData,
-      manager: managerMatch ? managerMatch[1].trim() : realtimeData.manager,
-      fundScale: scaleMatch ? scaleMatch[1].trim() : realtimeData.fundScale,
+      ...basicDetail,
+      manager: managerMatch ? managerMatch[1].trim() : basicDetail.manager,
+      fundScale: scaleMatch ? scaleMatch[1].trim() : basicDetail.fundScale,
       dividend: dividendMatch ? dividendMatch[1].trim() : '-',
       managementFee: extractFeeRate('管理费率'),
       custodianFee: extractFeeRate('托管费率'),
@@ -223,7 +225,7 @@ export const getFundFullDetail = async (code: string): Promise<FundDetail> => {
     };
   } catch (error) {
     console.error('获取基金完整详情失败:', error);
-    // 如果获取详细信息失败，返回实时数据
+    // 如果获取详细信息失败，返回基础信息
     return getFundDetail(code);
   }
 };

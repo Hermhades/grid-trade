@@ -1,0 +1,47 @@
+{
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/sina",
+      "destination": "/api/sina"
+    },
+    {
+      "source": "/api/sina/:path*",
+      "destination": "/api/sina"
+    },
+    {
+      "source": "/api/fund/f10/:path*",
+      "destination": "/api/f10"
+    },
+    {
+      "source": "/api/fund/:path*",
+      "destination": "/api/fund"
+    },
+    {
+      "source": "/api/detail/:path*",
+      "destination": "/api/detail"
+    },
+    {
+      "source": "/api/history/:path*",
+      "destination": "/api/history"
+    }
+  ]
+} 
