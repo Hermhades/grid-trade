@@ -250,9 +250,12 @@ export const getFundHistory = async (
 ): Promise<{ items: FundHistory[]; total: number }> => {
   try {
     // 检查是否是当天
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    now.setHours(now.getHours() + 8);
+    const today = now.toISOString().split('T')[0];
     if (startDate === today && endDate === today) {
       // 如果是当天，使用实时估值接口
+      console.log('当天日期:', today);
       const realTimeData = await getFundDetail(code);
       return {
         items: [{
