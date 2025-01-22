@@ -32,7 +32,7 @@ export const downloadJson = (data: BackupData) => {
   const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
   
   link.href = url;
-  link.download = `grid-trade-backup-${date}.json`;
+  link.download = `fund-grid-vercel-app-backup-${date}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
