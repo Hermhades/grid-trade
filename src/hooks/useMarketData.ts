@@ -4,7 +4,7 @@ import { RootState } from '../store';
 import { fetchMarketData } from '../store/slices/marketSlice';
 import { AppDispatch } from '../store';
 
-const REFRESH_INTERVAL = 10000; // 10秒刷新一次
+const REFRESH_INTERVAL = 30000; // 30秒刷新一次
 
 export const useMarketData = () => {
   const dispatch = useDispatch<AppDispatch>();
