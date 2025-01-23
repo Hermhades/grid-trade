@@ -251,12 +251,33 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
                   )}
                   <br />
                   更新时间: {realTimeData.lastUpdate}
-                  <br />
-                  预估网格大小: {
-                    realTimeData.estimatedGridSize
-                      ? `距买入 ${realTimeData.estimatedGridSize.buy >= 0 ? '+' : ''}${realTimeData.estimatedGridSize.buy.toFixed(2)}% | 距卖出 ${realTimeData.estimatedGridSize.sell >= 0 ? '+' : ''}${realTimeData.estimatedGridSize.sell.toFixed(2)}%`
-                      : '-'
-                  }
+                  <div className="flex items-center space-x-2">
+                    <span>预估网格大小:</span>
+                    {realTimeData.estimatedGridSize ? (
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center">
+                          <span className={realTimeData.estimatedGridSize.buy >= 0 ? 'text-rose-500 font-medium' : ''}>
+                            距买入: {realTimeData.estimatedGridSize.buy >= 0 ? '+' : ''}{realTimeData.estimatedGridSize.buy.toFixed(2)}%
+                          </span>
+                          {realTimeData.estimatedGridSize.buy >= 0 && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">
+                              可买入
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center">
+                          <span className={realTimeData.estimatedGridSize.sell <= 0 ? 'text-emerald-500 font-medium' : ''}>
+                            距卖出: {realTimeData.estimatedGridSize.sell >= 0 ? '+' : ''}{realTimeData.estimatedGridSize.sell.toFixed(2)}%
+                          </span>
+                          {realTimeData.estimatedGridSize.sell <= 0 && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                              可卖出
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : '-'}
+                  </div>
                 </Text>
               </div>
             )}
