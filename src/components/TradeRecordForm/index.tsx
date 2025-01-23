@@ -5,6 +5,7 @@ import { addRecord } from '../../store/slices/tradeRecordSlice';
 import type { RootState } from '../../store';
 import dayjs from 'dayjs';
 import { getFundHistory } from '../../services/market';
+import useGridCalculation from '../../hooks/useGridCalculation';
 
 const { Text } = Typography;
 
@@ -24,18 +25,17 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
   } | null>(null);
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(dayjs());
 
+  const { calculateGridMetrics } = useGridCalculation();
+
   // 获取当前激活的策略
   const activeStrategy = useSelector((state: RootState) =>
     state.gridStrategy.strategies.find(s => s.fundCode === fundCode && s.isActive)
   );
 
-  // 获取最新的持仓记录或最新的卖出记录
-  const latestRecord = useSelector((state: RootState) => {
-    const records = state.tradeRecord.records
-      .filter(record => record.fundCode === fundCode)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    return records[0] || null;
-  });
+  // 获取所有交易记录
+  const records = useSelector((state: RootState) =>
+    state.tradeRecord.records.filter(record => record.fundCode === fundCode)
+  );
 
   // 获取日期对应的净值数据
   const fetchNetWorthData = async (date: string) => {
@@ -47,21 +47,31 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
         if (isRealTime) {
           // 如果是实时数据，计算网格宽度并更新状态
           let gridWidth: number | undefined;
-          if (latestRecord) {
-            const baseNetWorth = latestRecord.status === 'holding' 
-              ? latestRecord.netWorth 
-              : latestRecord.sellNetWorth!;
-            gridWidth = ((netWorth - baseNetWorth) / baseNetWorth) * 100;
-          }
-          
-          // 计算预估网格大小
           let estimatedGridSize: { buy: number; sell: number } | undefined;
-          if (gridWidth !== undefined && activeStrategy) {
+          
+          if (activeStrategy) {
+            // 计算买入距离
+            const buyMetrics = calculateGridMetrics(
+              netWorth,
+              records,
+              fundCode,
+              activeStrategy,
+              'buy'
+            );
+
+            // 计算卖出距离
+            const sellMetrics = calculateGridMetrics(
+              netWorth,
+              records,
+              fundCode,
+              activeStrategy,
+              'sell'
+            );
+
+            gridWidth = buyMetrics.gridWidth;
             estimatedGridSize = {
-              // 计算距离买入点的距离（负数表示已超过买入点）
-              buy: -gridWidth - activeStrategy.buyWidth,
-              // 计算距离卖出点的距离（负数表示已超过卖出点）
-              sell: activeStrategy.sellWidth - gridWidth
+              buy: buyMetrics.estimatedGridSize.buy,
+              sell: sellMetrics.estimatedGridSize.sell
             };
           }
           
@@ -101,12 +111,12 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
     }
   }, []);
 
-  // 监听最新记录变化，重新计算网格距离
+  // 监听记录变化，重新计算网格距离
   useEffect(() => {
     if (selectedDate?.isSame(dayjs(), 'day')) {
       fetchNetWorthData(selectedDate.format('YYYY-MM-DD'));
     }
-  }, [latestRecord]);
+  }, [records]);
 
   // 自动刷新实时数据
   useEffect(() => {
@@ -128,7 +138,7 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
         clearInterval(timer);
       }
     };
-  }, [selectedDate, fundCode, latestRecord]);
+  }, [selectedDate, fundCode, records]);
 
   const handleDateChange = async (date: dayjs.Dayjs | null) => {
     setSelectedDate(date);
@@ -195,8 +205,7 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
                 style={{ width: '100%' }}
                 disabledDate={(current) => {
                   const today = dayjs().endOf('day');
-                  const latestDate = latestRecord?.date ? dayjs(latestRecord.date) : null;
-                  return current > today || (latestDate ? current < latestDate : false);
+                  return current > today;
                 }}
                 onChange={handleDateChange}
                 disabled={loading}
@@ -256,22 +265,36 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
                     {realTimeData.estimatedGridSize ? (
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center">
-                          <span className={realTimeData.estimatedGridSize.buy >= 0 ? 'text-rose-500 font-medium' : ''}>
-                            距买入: {realTimeData.estimatedGridSize.buy >= 0 ? '+' : ''}{realTimeData.estimatedGridSize.buy.toFixed(2)}%
-                          </span>
-                          {realTimeData.estimatedGridSize.buy >= 0 && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">
-                              可买入
+                          {realTimeData.estimatedGridSize.buy >= 0 ? (
+                            <span className="inline-flex items-center">
+                              <span className="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800">
+                                可买入
+                              </span>
+                              <span className="ml-2">溢{Math.abs(realTimeData.estimatedGridSize.buy).toFixed(2)}%</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center">
+                              <span className="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-gray-200 text-gray-700">
+                                距买入
+                              </span>
+                              <span className="ml-2">差{Math.abs(realTimeData.estimatedGridSize.buy).toFixed(2)}%</span>
                             </span>
                           )}
                         </div>
                         <div className="flex items-center">
-                          <span className={realTimeData.estimatedGridSize.sell <= 0 ? 'text-emerald-500 font-medium' : ''}>
-                            距卖出: {realTimeData.estimatedGridSize.sell >= 0 ? '+' : ''}{realTimeData.estimatedGridSize.sell.toFixed(2)}%
-                          </span>
-                          {realTimeData.estimatedGridSize.sell <= 0 && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-                              可卖出
+                          {realTimeData.estimatedGridSize.sell <= 0 ? (
+                            <span className="inline-flex items-center">
+                              <span className="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800">
+                                可卖出
+                              </span>
+                              <span className="ml-2">溢{Math.abs(realTimeData.estimatedGridSize.sell).toFixed(2)}%</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center">
+                              <span className="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-gray-200 text-gray-700">
+                                距卖出
+                              </span>
+                              <span className="ml-2">差{Math.abs(realTimeData.estimatedGridSize.sell).toFixed(2)}%</span>
                             </span>
                           )}
                         </div>

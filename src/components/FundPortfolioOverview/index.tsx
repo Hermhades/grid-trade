@@ -6,7 +6,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../store';
 import { useFundData } from '../../hooks/useFundData';
 import { toggleStar } from '../../store/slices/fundStarSlice';
+import type { TradeRecord } from '../../store/slices/tradeRecordSlice';
 import FundSearch from '../FundSearch';
+import useGridCalculation from '../../hooks/useGridCalculation';
 
 interface FundCard {
   code: string;
@@ -51,6 +53,8 @@ const FundPortfolioOverview: React.FC = () => {
   // 获取基金数据
   const { fundData, loading: fundDataLoading, error: fundDataError } = useFundData(fundCodes);
 
+  const { calculateGridMetrics } = useGridCalculation();
+
   // 处理基金数据
   const fundCards = useMemo(() => {
     const cards: FundCard[] = [];
@@ -65,15 +69,11 @@ const FundPortfolioOverview: React.FC = () => {
       if (!fund) return;
 
       // 获取该基金的所有交易记录
-      const fundRecords = tradeRecords
-        .filter(r => r.fundCode === code)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const fundRecords = tradeRecords.filter(r => r.fundCode === code);
 
       // 计算当前持仓数量
-      const currentGrids = fundRecords.filter(r => r.status === 'holding').length;
-
-      // 获取持仓记录
       const holdingRecords = fundRecords.filter(r => r.status === 'holding');
+      const currentGrids = holdingRecords.length;
 
       // 计算当前市值
       const currentNetWorth = fund.estimatedNetWorth || fund.netWorth;
@@ -89,25 +89,75 @@ const FundPortfolioOverview: React.FC = () => {
         ? ((currentMarketValue - holdingCost) / holdingCost) * 100
         : 0;
 
-      // 获取最近一次操作
-      const lastOperation = fundRecords[0];
+      // 获取最近一次操作日期和类型
+      const lastOperation = (() => {
+        let lastDate = '';
+        let operationType: 'buy' | 'sell' = 'buy';
+        let operationPrice = 0;
+        let lastRecord: TradeRecord | null = null;
+
+        fundRecords.forEach(record => {
+          // 检查买入日期
+          if (record.date > lastDate) {
+            lastDate = record.date;
+            operationType = 'buy';
+            operationPrice = record.netWorth;
+            lastRecord = record;
+          }
+          // 检查卖出日期
+          if (record.sellDate && record.sellDate > lastDate) {
+            lastDate = record.sellDate;
+            operationType = 'sell';
+            operationPrice = record.sellNetWorth!;
+            lastRecord = record;
+          }
+        });
+
+        return {
+          operation: lastDate ? {
+            type: operationType,
+            date: lastDate,
+            price: operationPrice,
+          } : {
+            type: 'buy' as const,
+            date: '-',
+            price: 0,
+          },
+          record: lastRecord
+        };
+      })();
       
       // 计算距离下次操作的网格宽度
       let nextGridWidth = {
         buy: 0,
         sell: 0
       };
-      if (lastOperation && activeStrategy) {
-        const currentNetWorth = fund.estimatedNetWorth || fund.netWorth;
-        const baseNetWorth = lastOperation.status === 'holding'
-          ? lastOperation.netWorth
-          : lastOperation.sellNetWorth!;
-        const gridWidth = ((currentNetWorth - baseNetWorth) / baseNetWorth) * 100;
 
-        // 计算距离买入点的距离（负数表示已超过买入点）
-        nextGridWidth.buy = -gridWidth - activeStrategy.buyWidth;
-        // 计算距离卖出点的距离（负数表示已超过卖出点）
-        nextGridWidth.sell = activeStrategy.sellWidth - gridWidth;
+      if (activeStrategy) {
+        const currentNetWorth = fund.estimatedNetWorth || fund.netWorth;
+        
+        // 计算买入距离
+        const buyMetrics = calculateGridMetrics(
+          currentNetWorth,
+          fundRecords,
+          code,
+          activeStrategy,
+          'buy'
+        );
+
+        // 计算卖出距离
+        const sellMetrics = calculateGridMetrics(
+          currentNetWorth,
+          fundRecords,
+          code,
+          activeStrategy,
+          'sell'
+        );
+
+        nextGridWidth = {
+          buy: buyMetrics.estimatedGridSize.buy,
+          sell: sellMetrics.estimatedGridSize.sell
+        };
       }
 
       cards.push({
@@ -117,15 +167,7 @@ const FundPortfolioOverview: React.FC = () => {
         maxGrids: activeStrategy.gridCount,
         totalProfit: profitPercentage,
         profitPercentage,
-        lastOperation: lastOperation ? {
-          type: lastOperation.status === 'holding' ? 'buy' : 'sell',
-          date: lastOperation.date,
-          price: lastOperation.netWorth,
-        } : {
-          type: 'buy',
-          date: '-',
-          price: 0,
-        },
+        lastOperation: lastOperation.operation,
         nextGridWidth,
         isStarred: starredFunds.includes(code),
         strategy: {
@@ -136,7 +178,7 @@ const FundPortfolioOverview: React.FC = () => {
     });
 
     return cards;
-  }, [gridStrategies, tradeRecords, fundData, starredFunds]);
+  }, [fundCodes, fundData, gridStrategies, tradeRecords, starredFunds, calculateGridMetrics]);
 
   // 排序和过滤逻辑
   const sortedFundCards = useMemo(() => {
@@ -239,28 +281,46 @@ const FundPortfolioOverview: React.FC = () => {
 
             <div>
               <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">距离操作</div>
-              <div className="text-lg font-medium">
+              <div>
                 {fund.lastOperation.date !== '-' ? (
-                  <div className="space-y-1">
-                    <div className={`flex items-center ${Math.abs(fund.nextGridWidth.buy) <= Math.abs(fund.nextGridWidth.sell) ? 'font-bold' : ''}`}>
-                      <span className={`flex-1 ${fund.nextGridWidth.buy >= 0 ? 'text-rose-500 font-bold' : ''}`}>
-                        距买入: {fund.nextGridWidth.buy >= 0 ? '+' : ''}{fund.nextGridWidth.buy.toFixed(2)}%
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <span className="flex-1">
+                        {fund.nextGridWidth.buy >= 0 ? (
+                          <span className="inline-flex items-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800">
+                              可买入
+                            </span>
+                            <span className="ml-2">溢 {Math.abs(fund.nextGridWidth.buy).toFixed(2)}%</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-gray-200 text-gray-700">
+                              距买入
+                            </span>
+                            <span className="ml-2">差 {Math.abs(fund.nextGridWidth.buy).toFixed(2)}%</span>
+                          </span>
+                        )}
                       </span>
-                      {fund.nextGridWidth.buy >= 0 && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">
-                          可买入
-                        </span>
-                      )}
                     </div>
-                    <div className={`flex items-center ${Math.abs(fund.nextGridWidth.buy) > Math.abs(fund.nextGridWidth.sell) ? 'font-bold' : ''}`}>
-                      <span className={`flex-1 ${fund.nextGridWidth.sell <= 0 ? 'text-emerald-500 font-bold' : ''}`}>
-                        距卖出: {fund.nextGridWidth.sell >= 0 ? '+' : ''}{fund.nextGridWidth.sell.toFixed(2)}%
+                    <div className="flex items-center">
+                      <span className="flex-1">
+                        {fund.nextGridWidth.sell <= 0 ? (
+                          <span className="inline-flex items-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800">
+                              可卖出
+                            </span>
+                            <span className="ml-2">溢 {Math.abs(fund.nextGridWidth.sell).toFixed(2)}%</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded text-sm font-medium bg-gray-200 text-gray-700">
+                              距卖出
+                            </span>
+                            <span className="ml-2">差 {Math.abs(fund.nextGridWidth.sell).toFixed(2)}%</span>
+                          </span>
+                        )}
                       </span>
-                      {fund.nextGridWidth.sell <= 0 && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-                          可卖出
-                        </span>
-                      )}
                     </div>
                   </div>
                 ) : (

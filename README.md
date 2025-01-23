@@ -173,6 +173,8 @@ src/
 │   ├── TradeRecordForm/  # 交易记录表单组件
 │   └── TradeRecordTable/ # 交易记录表格组件
 ├── hooks/            # 自定义 Hooks
+│   ├── useFundData.ts     # 基金数据获取 Hook
+│   └── useGridCalculation.ts  # 网格计算 Hook
 ├── layouts/          # 布局模板
 ├── pages/            # 页面组件
 │   ├── Fund/        # 基金详情页
@@ -205,6 +207,11 @@ src/
 - 增强网格交易提醒
   - 优化网格宽度的视觉展示
   - 增加买入/卖出信号的醒目提示
+- 优化网格计算逻辑
+  - 新增 useGridCalculation hook，统一网格计算逻辑
+    - 修改网格宽度计算规则：
+    - 买入基准：使用最近一次卖出记录的卖出净值
+    - 卖出基准：使用最新未卖出记录的买入净值
 
 2025-01-22
 - 新增数据导入导出功能
