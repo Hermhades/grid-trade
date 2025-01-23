@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Form, DatePicker, InputNumber, Button, Space, Card, message, Row, Col, Typography } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import { addRecord } from '../../store/slices/tradeRecordSlice';
@@ -111,25 +111,29 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
     }
   }, []);
 
-  // 监听记录变化，重新计算网格距离
-  useEffect(() => {
-    if (selectedDate?.isSame(dayjs(), 'day')) {
-      fetchNetWorthData(selectedDate.format('YYYY-MM-DD'));
+  // 使用 useRef 来存储上一次的刷新时间
+  const lastRefreshTime = useRef(0);
+  const refreshDebounceTime = 1000; // 1秒内不重复刷新
+
+  // 统一的刷新函数
+  const refreshData = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastRefreshTime.current < refreshDebounceTime) {
+      return;
     }
-  }, [records]);
-
-  // 自动刷新实时数据
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    
-    const refreshData = async () => {
-      if (selectedDate?.isSame(dayjs(), 'day')) {
-        await fetchNetWorthData(selectedDate.format('YYYY-MM-DD'));
-      }
-    };
+    lastRefreshTime.current = now;
 
     if (selectedDate?.isSame(dayjs(), 'day')) {
-      refreshData();
+      await fetchNetWorthData(selectedDate.format('YYYY-MM-DD'));
+    }
+  }, [selectedDate, fundCode, records]);
+
+  // 监听记录变化和自动刷新
+  useEffect(() => {
+    refreshData();
+
+    let timer: NodeJS.Timeout;
+    if (selectedDate?.isSame(dayjs(), 'day')) {
       timer = setInterval(refreshData, 60000); // 每分钟刷新一次
     }
 
@@ -138,7 +142,7 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
         clearInterval(timer);
       }
     };
-  }, [selectedDate, fundCode, records]);
+  }, [selectedDate, fundCode, records, refreshData]);
 
   const handleDateChange = async (date: dayjs.Dayjs | null) => {
     setSelectedDate(date);
