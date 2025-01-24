@@ -20,7 +20,6 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
   const [realTimeData, setRealTimeData] = useState<{
     netWorth: number;
     lastUpdate: string;
-    gridWidth?: number;
     estimatedGridSize?: { buy: number; sell: number };
   } | null>(null);
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(dayjs());
@@ -46,7 +45,6 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
         
         if (isRealTime) {
           // 如果是实时数据，计算网格宽度并更新状态
-          let gridWidth: number | undefined;
           let estimatedGridSize: { buy: number; sell: number } | undefined;
           
           if (activeStrategy) {
@@ -68,7 +66,6 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
               'sell'
             );
 
-            gridWidth = buyMetrics.gridWidth;
             estimatedGridSize = {
               buy: buyMetrics.estimatedGridSize.buy,
               sell: sellMetrics.estimatedGridSize.sell
@@ -78,7 +75,6 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
           setRealTimeData({
             netWorth,
             lastUpdate: data.items[0].date,
-            gridWidth,
             estimatedGridSize
           });
           
@@ -257,11 +253,6 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
               <div className="mt-2">
                 <Text type="secondary">
                   当前净值: {realTimeData.netWorth.toFixed(4)}
-                  {realTimeData.gridWidth !== undefined && (
-                    <span style={{ color: realTimeData.gridWidth >= 0 ? '#f43f5e' : '#10b981' }}>
-                      {' '}(宽度: {realTimeData.gridWidth.toFixed(2)}%)
-                    </span>
-                  )}
                   <br />
                   更新时间: {realTimeData.lastUpdate}
                   <div className="flex items-center space-x-2">
