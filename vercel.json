@@ -42,6 +42,10 @@
     {
       "source": "/api/history/:path*",
       "destination": "/api/history"
+    },
+    {
+      "source": "/((?!api/.*).*)",
+      "destination": "/index.html"
     }
   ]
 } 
