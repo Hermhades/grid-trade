@@ -126,12 +126,15 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
 
   // 监听记录变化和自动刷新
   useEffect(() => {
+    // 如果不是当天，不需要刷新
+    if (!selectedDate?.isSame(dayjs(), 'day')) {
+      return;
+    }
+
     refreshData();
 
     let timer: NodeJS.Timeout;
-    if (selectedDate?.isSame(dayjs(), 'day')) {
-      timer = setInterval(refreshData, 60000); // 每分钟刷新一次
-    }
+    timer = setInterval(refreshData, 60000);
 
     return () => {
       if (timer) {
@@ -174,7 +177,11 @@ const TradeRecordForm: React.FC<TradeRecordFormProps> = ({ fundCode }) => {
         expectedSellAccNetWorth,
       }));
 
-      form.resetFields();
+      // 只重置金额字段，保持日期不变
+      form.setFieldsValue({
+        buyAmount: undefined
+      });
+      
       message.success('交易记录添加成功');
     } catch (error) {
       message.error('交易记录添加失败');

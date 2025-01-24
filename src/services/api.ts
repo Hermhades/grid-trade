@@ -78,6 +78,7 @@ export const api = {
         estimatedNetWorth: Number(data.gsz),
         estimatedTime: data.gztime,
         updateTime: data.jzrq,
+        dayGrowth: Number(data.gszzl || 0),
       };
     } catch (error) {
       console.error('获取基金详情失败:', error);

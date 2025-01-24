@@ -9,6 +9,7 @@ export interface FundData {
   estimatedNetWorth: number;
   estimatedTime: string;
   updateTime: string;
+  dayGrowth: number;
 }
 
 export const useFundData = (fundCodes: string[]) => {
@@ -36,6 +37,7 @@ export const useFundData = (fundCodes: string[]) => {
               estimatedNetWorth: detail.estimatedNetWorth,
               estimatedTime: detail.estimatedTime,
               updateTime: detail.updateTime,
+              dayGrowth: detail.dayGrowth || 0,
             };
           })
         );

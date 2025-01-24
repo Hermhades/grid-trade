@@ -24,6 +24,7 @@ export interface MarketIndex {
     estimatedNetWorth: number;
     estimatedTime: string;
     updateTime: string;
+    dayGrowth: number;
   }
   
   // 基金持仓类型

@@ -17,6 +17,7 @@ interface FundCard {
   maxGrids: number;
   totalProfit: number;
   profitPercentage: number;
+  dayGrowth: number;
   lastOperation: {
     type: 'buy' | 'sell';
     date: string;
@@ -167,6 +168,7 @@ const FundPortfolioOverview: React.FC = () => {
         maxGrids: activeStrategy.gridCount,
         totalProfit: profitPercentage,
         profitPercentage,
+        dayGrowth: fund.dayGrowth || 0,
         lastOperation: lastOperation.operation,
         nextGridWidth,
         isStarred: starredFunds.includes(code),
@@ -216,6 +218,7 @@ const FundPortfolioOverview: React.FC = () => {
 
   const renderFundCard = (fund: FundCard) => {
     const profitColor = fund.totalProfit >= 0 ? 'text-rose-500' : 'text-emerald-500';
+    const dayGrowthColor = fund.dayGrowth >= 0 ? 'text-rose-500' : 'text-emerald-500';
 
     return (
       <Col xs={24} sm={12} lg={8} xl={6} key={fund.code}>
@@ -246,7 +249,7 @@ const FundPortfolioOverview: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">持仓网格</div>
                 <div className="text-lg font-medium">
@@ -254,29 +257,36 @@ const FundPortfolioOverview: React.FC = () => {
                 </div>
               </div>
               <div>
-                <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">持仓收益率</div>
+                <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">持仓收益</div>
                 <div className={`text-lg font-medium ${profitColor}`}>
                   {fund.totalProfit >= 0 ? '+' : ''}{fund.totalProfit.toFixed(2)}%
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">日涨幅</div>
+                <div className={`text-lg font-medium ${dayGrowthColor}`}>
+                  {fund.dayGrowth >= 0 ? '+' : ''}{fund.dayGrowth.toFixed(2)}%
                 </div>
               </div>
             </div>
 
             <div>
               <div className="text-xs font-medium text-gray-400 tracking-wide mb-1">最近操作</div>
-              <div className="flex items-center space-x-2">
-                {fund.lastOperation.date !== '-' ? (
-                  <>
-                    <Tag color={fund.lastOperation.type === 'buy' ? 'green' : 'red'}>
-                      {fund.lastOperation.type === 'buy' ? '买入' : '卖出'}
-                    </Tag>
-                    <span className="text-sm text-gray-600">
-                      {fund.lastOperation.date}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm text-gray-400">暂无操作记录</span>
-                )}
-              </div>
+              {fund.lastOperation.date !== '-' ? (
+                <div className="flex items-center space-x-2">
+                  <Tag color={fund.lastOperation.type === 'buy' ? 'green' : 'red'}>
+                    {fund.lastOperation.type === 'buy' ? '买入' : '卖出'}
+                  </Tag>
+                  <span className="text-sm text-gray-500">
+                    {fund.lastOperation.date}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    @{fund.lastOperation.price.toFixed(4)}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-sm text-gray-400">暂无操作记录</span>
+              )}
             </div>
 
             <div>

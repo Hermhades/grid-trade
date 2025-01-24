@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Spin, Button, Statistic, Row, Col, Divider, message } from 'antd';
+import { Card, Spin, Button, Statistic, Row, Col, Divider, message, Popover } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { getFundFullDetail, FundDetail, getFundHistory } from '../../services/market';
 import GridStrategyForm from '../../components/GridStrategyForm';
@@ -119,16 +119,50 @@ const FundPage: React.FC = () => {
                     />
                   </Col>
                   <Col span={8}>
-                    <Statistic
-                      title="日涨幅"
-                      value={fundDetail.dayGrowth}
-                      precision={2}
-                      suffix="%"
-                      valueStyle={{
-                        color: fundDetail.dayGrowth > 0 ? '#f43f5e' : 
-                               fundDetail.dayGrowth < 0 ? '#10b981' : '#6b7280'
-                      }}
-                    />
+                    <Popover
+                      content={
+                        <div className="w-[600px] h-[300px] flex items-center justify-center">
+                          <div className="relative w-full h-full flex items-center justify-center">
+                            <Spin spinning={true} className="absolute" />
+                            <img 
+                              src={`http://j4.dfcfw.com/charts/pic6/${fundDetail.code}.png`}
+                              alt="日内净值估算走势"
+                              className="max-w-full max-h-full opacity-0 transition-opacity duration-300"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = '暂无日内数据';
+                                }
+                              }}
+                              onLoad={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.classList.remove('opacity-0');
+                                const spin = target.parentElement?.querySelector('.ant-spin');
+                                if (spin) {
+                                  spin.remove();
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      }
+                      title="日内净值估算走势"
+                      trigger="hover"
+                      placement="bottom"
+                    >
+                      <Statistic
+                        title="日涨幅"
+                        value={fundDetail.dayGrowth}
+                        precision={2}
+                        suffix="%"
+                        valueStyle={{
+                          color: fundDetail.dayGrowth > 0 ? '#f43f5e' : 
+                                fundDetail.dayGrowth < 0 ? '#10b981' : '#6b7280'
+                        }}
+                      />
+                    </Popover>
                   </Col>
                 </Row>
 
